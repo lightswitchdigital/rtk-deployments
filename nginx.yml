@@ -4,22 +4,44 @@ metadata:
   name: nginx-conf
 data:
   nginx.conf: |
-    upstream frontend {
-      server frontend:3000;
+    worker_processes  5;  ## Default: 1
+    worker_rlimit_nofile 8192;
+
+    events {
+      worker_connections  1024;  ## Default: 1024
     }
-
-    server {
-        listen 80;
-        server_name rtk.lightswitch.digital;
-
-        location / {
-            proxy_pass http://frontend;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header Host $host;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    http {
+        upstream frontend {
+            server frontend:3000;
         }
-        error_page   500 502 503 504  /50x.html;
+        server {
+            listen 80;
+            server_name rtk.lightswitch.digital;
 
+            location / {
+                proxy_pass http://backend;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header Host $host;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            }
+            error_page   500 502 503 504  /50x.html;
+        }
+
+        upstream backend {
+            server backend:8000;
+        }
+        server {
+            listen 80;
+            server_name rtk-api.lightswitch.digital;
+
+            location / {
+                proxy_pass http://backend;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header Host $host;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            }
+            error_page   500 502 503 504  /50x.html;
+        }
     }
 ---
 apiVersion: apps/v1
@@ -49,9 +71,11 @@ spec:
               name: log
           resources:
             limits:
-              memory: 500Mi
+              memory: 100Mi
+              cpu: "1"
             requests:
-              memory: 500Mi
+              memory: 100Mi
+              cpu: "1"
       volumes:
         - name: nginx-conf
           configMap:
