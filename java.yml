@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: java-deployment
+  namespace: team10
+spec:
+  selector:
+    matchLabels:
+      app: java
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: java
+    spec:
+      containers:
+        - name: java-api
+          image: sireax/rtk-java-api:latest
+          ports:
+            - containerPort: 8000
+          resources:
+            limits:
+              memory: 4000Mi
+              cpu: "1"
+            requests:
+              cpu: "1"
+              memory: 4000Mi
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: java-api-service
+spec:
+  selector:
+    app: java
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
